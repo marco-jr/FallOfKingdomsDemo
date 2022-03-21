@@ -16,4 +16,8 @@ class FALLOFKINGDOMS_API AFallOfKingdomsGameModeBase : public AGameModeBase
 
 public:
 	AFallOfKingdomsGameModeBase();
+
+	UPROPERTY(EditAnywhere, Category = "Talk Settings")
+		float TextAnimSpeed;
+		float GetTextAnimSpeed() const { return TextAnimSpeed; }
 };

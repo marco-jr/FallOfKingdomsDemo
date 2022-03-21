@@ -9,4 +9,5 @@ AFallOfKingdomsGameModeBase::AFallOfKingdomsGameModeBase()
 {
 	DefaultPawnClass = APlayerCharacter::StaticClass();
 	PlayerControllerClass = ACharacterController::StaticClass();
+	TextAnimSpeed = 1;
 }
