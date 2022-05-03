@@ -8,6 +8,8 @@
 #include "PlayerCharacter.h"
 #include "Components/SceneComponent.h"
 #include "CharacterIdentity.h"
+#include "Components/SphereComponent.h"
+#include "HealthComponent.h"
 
 // Sets default values
 ADebugActor::ADebugActor()
@@ -19,12 +21,16 @@ ADebugActor::ADebugActor()
 	TalkComponent = CreateDefaultSubobject<UTalkComponent>(TEXT("TalkComponent"));
 	SceneComponent = CreateDefaultSubobject<USceneComponent>(TEXT("RootComponent"));
 	CharacterIdentity = CreateDefaultSubobject<UCharacterIdentity>(TEXT("CharacterIdentity"));
+	TestSphere = CreateDefaultSubobject<USphereComponent>(TEXT("Debug Sphere"));
 
 	RootComponent = SceneComponent;
 
 	InteractableComponent->SetupAttachment(GetRootComponent());
 	TalkComponent->SetupAttachment(GetRootComponent());
 	CharacterIdentity->SetupAttachment(GetRootComponent());
+	TestSphere->SetupAttachment(GetRootComponent());
+
+	TestSphere->InitSphereRadius(200);
 }
 
 // Called when the game starts or when spawned
@@ -33,6 +39,7 @@ void ADebugActor::BeginPlay()
 	Super::BeginPlay();
 	
 	InteractableComponent->InteractDelegate.AddDynamic(this, &ADebugActor::StartTalk);
+	TestSphere->OnComponentBeginOverlap.AddDynamic(this, &ADebugActor::DebugSphereOverlap);
 }
 
 void ADebugActor::StartTalk(UHandComponent* HandReference)
@@ -42,5 +49,13 @@ void ADebugActor::StartTalk(UHandComponent* HandReference)
 	if (_CharacterReference != nullptr)
 	{
 		TalkComponent->StartTalk(_CharacterReference->ControllerReference);
+	}
+}
+
+void ADebugActor::DebugSphereOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
+{
+	if (APlayerCharacter* _CharacterReference = Cast<APlayerCharacter>(OtherActor))
+	{
+		_CharacterReference->GetHealthComponent()->ChangeHealthByValue(EHealthType::Calories, 150);
 	}
 }

@@ -11,6 +11,7 @@ class UTalkComponent;
 class UHandComponent;
 class USceneComponent;
 class UCharacterIdentity;
+class USphereComponent;
 
 UCLASS()
 class FALLOFKINGDOMS_API ADebugActor : public AActor
@@ -22,6 +23,9 @@ public:
 	ADebugActor();
 
 	// PROPERTIES
+	UPROPERTY(EditAnywhere, Category = "Debug Components")
+		USphereComponent* TestSphere;
+
 	UPROPERTY(EditAnywhere, Category = "Components")
 		UCharacterIdentity* CharacterIdentity;
 		UCharacterIdentity* GetCharacterIdentity() const { return CharacterIdentity; }
@@ -44,5 +48,8 @@ protected:
 	
 	// METHODS
 	UFUNCTION()
-	void StartTalk(UHandComponent* HandReference);
+		void StartTalk(UHandComponent* HandReference);
+
+	UFUNCTION()
+		void DebugSphereOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
 };

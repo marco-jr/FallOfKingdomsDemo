@@ -98,16 +98,18 @@ FText UTalkComponent::GetNPCName()
 void UTalkComponent::StartTalk(ACharacterController* ControllerReference)
 {
 	CharacterController = ControllerReference;
-	CharacterController->UpdateIdentifiersVisibility(false);
-	CharacterController->GetPlayerCharacter()->GetActionComponent()->Busy();
-	UTalkWidget* _TalkWidgetReference = ControllerReference->GetPlayerCharacter()->TalkWidget;
-	CharacterController->AddWidgetEnablingMouse(_TalkWidgetReference);
+	GetCharacterController()->UpdateIdentifiersVisibility(false);
+	GetCharacterController()->GetPlayerCharacter()->GetActionComponent()->Busy();
+	UTalkWidget* _TalkWidgetReference = GetCharacterController()->GetPlayerCharacter()->TalkWidget;
+	GetCharacterController()->AddWidgetEnablingMouse(_TalkWidgetReference);
 	_TalkWidgetReference->SetTalkComponent(this);
-	_TalkWidgetReference->UpdateTalk(0, ControllerReference);
+	_TalkWidgetReference->UpdateTalk(0, GetCharacterController());
 	_TalkWidgetReference->AddToViewport(2);
 	_TalkWidgetReference->ShowTalkAnimation();
 	_TalkWidgetReference->SwitchResponsesVisibility();
 	GetWorld()->GetTimerManager().ClearTimer(EndTalkHandle);
+	float _CharacterDistance = FVector::Dist2D(GetOwner()->GetActorLocation(), GetCharacterController()->GetPlayerCharacter()->GetActorLocation());
+	SetSphereRadius(_CharacterDistance);
 }
 
 void UTalkComponent::EndTalk()

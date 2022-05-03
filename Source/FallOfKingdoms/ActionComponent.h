@@ -7,6 +7,7 @@
 #include "ActionComponent.generated.h"
 
 class ACharacter;
+class UHealthComponent;
 class UActionWidget;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FActionInterruptedSignature, UActionComponent*, ActionReference);
@@ -39,6 +40,10 @@ public:
 	UPROPERTY(EditAnywhere, Category = "Settings")
 		bool bIsHumanoid;
 		bool GetIsHumanoid() const { return bIsHumanoid; }
+
+	UPROPERTY(EditAnywhere, Category = "Settings")
+		bool bPlayFootstep;
+		bool GetPlayFootstep() const { return bPlayFootstep; }
 
 	UPROPERTY(BlueprintAssignable, Category = "Events")
 		FActionInterruptedSignature ActionInterruptedDelegate;
@@ -83,6 +88,10 @@ protected:
 
 	FTimerHandle SprintConsumptionTimer;
 	FTimerHandle ActionCompleteTimer;
+
+	UPROPERTY(VisibleAnywhere, Transient)
+		UHealthComponent* OwnerHealth;
+		UHealthComponent* GetOwnerHealth() const { return OwnerHealth; }
 
 	UPROPERTY(VisibleAnywhere, Transient)
 		ECurrentAction CurrentAction;

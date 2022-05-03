@@ -7,6 +7,7 @@
 #include "InteractableComponent.generated.h"
 
 class UHandComponent;
+class UTexture2D;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FInteractableDelegate, UHandComponent*, HandReference);
 
@@ -25,6 +26,10 @@ public:
 		FText GetInteractionText() const { return InteractionText; }
 
 	UPROPERTY(EditAnywhere, Category = "Settings")
+		UTexture2D* InteractionImage;
+		UTexture2D* GetInteractionImage() const { return InteractionImage; }
+
+	UPROPERTY(EditAnywhere, Category = "Settings")
 		bool bHandFreeNeeded;
 		bool GetHandFreeNeeded() const { return bHandFreeNeeded; }
 
@@ -32,7 +37,7 @@ public:
 		bool bAnimateInteraction;
 		bool GetAnimateInteraction() const { return bAnimateInteraction; }
 	
-		UPROPERTY(BlueprintAssignable, Category = "Events")
+	UPROPERTY(BlueprintAssignable, Category = "Events")
 		FInteractableDelegate InteractDelegate;
 
 	// METHODS

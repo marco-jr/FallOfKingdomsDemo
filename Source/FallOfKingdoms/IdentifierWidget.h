@@ -8,7 +8,7 @@
 
 class UProgressBar;
 class UTextBlock;
-// class UHealthComponent;
+class UHealthComponent;
 
 UCLASS()
 class FALLOFKINGDOMS_API UIdentifierWidget : public UUserWidget
@@ -25,12 +25,9 @@ public:
 		UTextBlock* ActorNameTextBlock;
 		UTextBlock* GetActorNameTextBlock() const { return ActorNameTextBlock; }
 
-	/*
 	UPROPERTY(VisibleAnywhere, Category = "Components")
 		UHealthComponent* HealthComponent;
 		UHealthComponent* GetHealthComponent() const { return HealthComponent; }
-	*/
-
 
 	// METHODS
 	UFUNCTION()

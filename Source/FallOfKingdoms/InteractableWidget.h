@@ -17,15 +17,12 @@ class FALLOFKINGDOMS_API UInteractableWidget : public UUserWidget
 
 public:
 	void SetActionText(FText NewActionText);
+	void SetActionImage(UTexture2D* NewActionImage);
 
 protected:
 	UPROPERTY(BlueprintReadOnly, meta = (BindWidget))
 		UTextBlock* ActionTextBlock;
 		UTextBlock* GetActionTextBlock() const { return ActionTextBlock; }
-
-	UPROPERTY(BlueprintReadOnly, meta = (BindWidget))
-		UTextBlock* InteractButtonTextBlock;
-		UTextBlock* GetInteractButtonTextBlock() const { return InteractButtonTextBlock; }
 
 	UPROPERTY(BlueprintReadOnly, meta = (BindWidget))
 		UImage* InteractImageBox;

@@ -10,6 +10,7 @@
 #include "GameFramework/CharacterMovementComponent.h"
 #include "ActionWidget.h"
 #include "FOKFunctionsLibrary.h"
+#include "HealthComponent.h"
 
 // Sets default values for this component's properties
 UActionComponent::UActionComponent()
@@ -47,6 +48,8 @@ UActionComponent::UActionComponent()
 void UActionComponent::BeginPlay()
 {
 	Super::BeginPlay();
+
+	OwnerHealth = GetOwner()->FindComponentByClass<UHealthComponent>();
 
 	if (Cast<ACharacter>(GetOwner()))
 	{
@@ -128,24 +131,23 @@ bool UActionComponent::GetCanDoActions(bool bShowBusyMessage)
 	{
 		return true;
 	}
-	else
+	else if (bShowBusyMessage)
 	{
-		if (bShowBusyMessage) {
-			ACharacterController* _ControllerReference = Cast<ACharacterController>(OwnerCharacter->Controller);
-			if (_ControllerReference)
-			{
-				_ControllerReference->ShowMessage(GetBusyMessage(), EMessageType::Warning);
-			}
+		ACharacterController* _ControllerReference = Cast<ACharacterController>(OwnerCharacter->Controller);
+		if (_ControllerReference)
+		{
+			_ControllerReference->ShowMessage(GetBusyMessage(), EMessageType::Warning);
+			return false;
 		}
-		return false;
-	};
+	}
+	return false;
 }
 
 void UActionComponent::DoAction(ECurrentAction NewAction, int ActionID, bool bShowActionProgress, float CustomDuration)
 {
 	GetWorld()->GetTimerManager().ClearTimer(ActionCompleteTimer);
 	
-	if (CurrentAction != ECurrentAction::Ready && NewAction != ECurrentAction::Ready)
+	if (CurrentAction != ECurrentAction::Ready)
 	{
 		ActionInterrupted();
 	}
@@ -180,13 +182,13 @@ void UActionComponent::DoAction(ECurrentAction NewAction, int ActionID, bool bSh
 
 void UActionComponent::ActionCompleted()
 {
-	Ready();
-
 	ActionCompletedDelegate.Broadcast(this);
 	ActionWidget->StopActionProgress();
 
 	ActionCompletedDelegate.Clear();
 	ActionInterruptedDelegate.Clear();
+
+	Ready();
 }
 
 void UActionComponent::ActionInterrupted()
@@ -210,5 +212,11 @@ void UActionComponent::Busy()
 
 void UActionComponent::SprintConsumption()
 {
-	// TODO: + VALUE TO FATIGUE
+	if (GetOwnerHealth() != nullptr)
+	{
+		GetOwnerHealth()->ChangeHealthByValue(EHealthType::Stamina, -0.011);
+		GetOwnerHealth()->ChangeHealthByValue(EHealthType::Calories, -0.0270);
+		GetOwnerHealth()->ChangeHealthByValue(EHealthType::Hidratation, -0.0370);
+		GetOwnerHealth()->ChangeHealthByValue(EHealthType::HealthQuality, 0.000360);
+	}
 }

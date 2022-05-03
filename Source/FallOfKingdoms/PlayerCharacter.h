@@ -22,6 +22,9 @@ class UTalkWidget;
 class UWidgetComponent;
 class UIdentifierWidget;
 class UCharacterHUD;
+class UHealthComponent;
+class UAudioComponent;
+class AAmbientMusic;
 
 UCLASS()
 class FALLOFKINGDOMS_API APlayerCharacter : public ACharacter
@@ -32,11 +35,26 @@ public:
 	// Sets default values for this character's properties
 	APlayerCharacter();
 
-	// COMPONENTS
+	// PROPERTIES
+	UPROPERTY(EditAnywhere, Category = "Settings")
+		float MusicVolume;
+		float GetMusicVolume() const { return MusicVolume; }
 
 	UPROPERTY(VisibleAnywhere, Category = "Logic")
 		UTalkWidget* TalkWidget;
 		UTalkWidget* GetTalkWidget() const { return TalkWidget; }
+	
+	UPROPERTY(VisibleAnywhere, Category = "Components")
+		UAudioComponent* DefaultMusicAudioComponent;
+		UAudioComponent* GetDefaultMusicAudioComponent() const { return DefaultMusicAudioComponent; }
+
+	UPROPERTY(VisibleAnywhere, Category = "Components")
+		UAudioComponent* MusicAudioComponent;
+		UAudioComponent* GetMusicAudioComponent() const { return MusicAudioComponent; }
+
+	UPROPERTY(VisibleAnywhere, Category = "Components")
+		UHealthComponent* HealthComponent;
+		UHealthComponent* GetHealthComponent() const { return HealthComponent; }
 
 	UPROPERTY(VisibleAnywhere, Category = "Components")
 		USphereComponent* CommunicationSphere;
@@ -88,6 +106,12 @@ public:
 
 	// FUNCTIONS
 	UFUNCTION()
+		USoundBase* GetRandomMusicSound();
+
+	UFUNCTION()
+		void PlayMusic(AAmbientMusic* AmbientMusicReference = nullptr, float StartVolume = 1);
+
+	UFUNCTION()
 		FVector GetFaceForward();
 
 	UFUNCTION()
@@ -100,8 +124,11 @@ protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
 
-
 	// PROPERTIES
+	UPROPERTY(VisibleAnywhere, Transient)
+		AAmbientMusic* CurrentAmbientMusic;
+		AAmbientMusic* GetCurrentAmbientMusic() const { return CurrentAmbientMusic; }
+
 	UPROPERTY(VisibleAnywhere, Transient)
 		UCharacterHUD* HUD;
 		UCharacterHUD* GetHUD() const { return HUD; }
@@ -123,6 +150,10 @@ protected:
 		UInteractableWidget* GetInteractableWidget() const { return InteractableWidget; }
 
 	UPROPERTY(EditAnywhere, Category = "Settings")
+		UCurveFloat* FOVCurve;
+		UCurveFloat* GetFOVCurve() const { return FOVCurve; }
+
+	UPROPERTY(EditAnywhere, Category = "Settings")
 		TSubclassOf<UCharacterHUD> HUDClass;
 
 	UPROPERTY(EditAnywhere, Category = "Settings")
@@ -133,6 +164,10 @@ protected:
 
 	UPROPERTY(EditAnywhere, Category = "Settings")
 		TSubclassOf<UTalkWidget> TalkWidgetClass;
+
+	UPROPERTY(EditAnywhere, Category = "Settings")
+		TArray<USoundBase*> DefaultMusicSounds;
+		TArray<USoundBase*> GetDefaultMusicSounds() const { return DefaultMusicSounds; }
 
 	UPROPERTY(VisibleAnywhere, Transient)
 		UInteractableComponent* VisionInteractable;
@@ -152,6 +187,7 @@ protected:
 
 	FTimerHandle InteractableTimer;
 	FTimerHandle IdentifierTimer;
+	FTimerHandle SpringArmTimer;
 	float RightHandClickTime;
 	float LeftHandClickTime;
 
@@ -169,6 +205,9 @@ protected:
 	void Drop();
 	void SwapHands();
 	void SwapMouseVisibility();
+
+	UFUNCTION()
+		void UpdateSpringArm();
 
 	UFUNCTION()
 		void Interacted(UActionComponent* ActionReference);
@@ -196,6 +235,12 @@ protected:
 
 	UFUNCTION()
 		void UpdateIdentifiers();
+
+	UFUNCTION()
+		void SoundMusicFinished();
+
+	UFUNCTION()
+		void DefaultSoundMusicFinished();
 
 	// DEBUG
 		void Debug();

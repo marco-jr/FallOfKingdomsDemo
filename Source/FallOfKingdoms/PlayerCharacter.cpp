@@ -19,6 +19,10 @@
 #include "InteractableWidget.h"
 #include "IdentifierWidget.h"
 #include "CharacterHUD.h"
+#include "HealthComponent.h"
+#include "Components/AudioComponent.h"
+#include "AmbientMusic.h"
+
 
 // DEBUG INCLUDE
 #include "TalkWidget.h"
@@ -40,14 +44,21 @@ APlayerCharacter::APlayerCharacter()
 	CommunicationSphere = CreateDefaultSubobject<USphereComponent>(TEXT("Communication Sphere"));
 	RightHand = CreateDefaultSubobject<UHandComponent>(TEXT("Right Hand"));
 	LeftHand = CreateDefaultSubobject<UHandComponent>(TEXT("Left Hand"));
+	HealthComponent = CreateDefaultSubobject<UHealthComponent>(TEXT("Health Component"));
+	MusicAudioComponent = CreateDefaultSubobject<UAudioComponent>(TEXT("MusicAudioComponent"));
+	DefaultMusicAudioComponent = CreateDefaultSubobject<UAudioComponent>(TEXT("DefaultMusicAudioComponent"));
+	InteractableWidgetComponent = CreateDefaultSubobject<UWidgetComponent>(TEXT("Interactable Widget Component"));
+	IdentifierWidgetComponent = CreateDefaultSubobject<UWidgetComponent>(TEXT("Identifier Widget Component"));
 
 	TorsoMeshComponent->SetupAttachment(GetMesh());
 	HandsMeshComponent->SetupAttachment(GetMesh());
 	LegsMeshComponent->SetupAttachment(GetMesh());
 	FeetMeshComponent->SetupAttachment(GetMesh());
-	CameraComponent->SetupAttachment(SpringArmComponent);
-	ForwardArrow->SetupAttachment(CameraComponent);
-	CommunicationSphere->SetupAttachment(RootComponent);
+	CameraComponent->SetupAttachment(GetSpringArmComponent());
+	ForwardArrow->SetupAttachment(GetCameraComponent());
+	MusicAudioComponent->SetupAttachment(GetCameraComponent());
+	DefaultMusicAudioComponent->SetupAttachment(GetCameraComponent());
+	CommunicationSphere->SetupAttachment(GetRootComponent());
 	RightHand->SetupAttachment(GetMesh());
 	LeftHand->SetupAttachment(GetMesh());
 	SpringArmComponent->SetupAttachment(GetMesh());
@@ -64,13 +75,42 @@ APlayerCharacter::APlayerCharacter()
 	CommunicationSphere->OnComponentBeginOverlap.AddDynamic(this, &APlayerCharacter::CommunicationBeginOverlap);
 	CommunicationSphere->OnComponentEndOverlap.AddDynamic(this, &APlayerCharacter::CommunicationEndOverlap);
 
-	InteractableWidgetComponent = CreateDefaultSubobject<UWidgetComponent>(TEXT("Interactable Widget Component"));
 	InteractableWidgetComponent->SetWidgetSpace(EWidgetSpace::Screen);
 	InteractableWidgetComponent->SetVisibility(false);
 
-	IdentifierWidgetComponent = CreateDefaultSubobject<UWidgetComponent>(TEXT("Identifier Widget Component"));
 	IdentifierWidgetComponent->SetWidgetSpace(EWidgetSpace::Screen);
 	IdentifierWidgetComponent->SetVisibility(false);
+
+	MusicVolume = 0.1;
+}
+
+USoundBase* APlayerCharacter::GetRandomMusicSound()
+{
+	USoundBase* _RandomSound = GetDefaultMusicSounds()[FMath::RandRange(0, GetDefaultMusicSounds().Num() - 1)];
+	return _RandomSound != nullptr ? _RandomSound : nullptr;
+}
+
+void APlayerCharacter::PlayMusic(AAmbientMusic* AmbientMusicReference, float StartVolume)
+{
+	CurrentAmbientMusic = AmbientMusicReference;
+
+	if (GetCurrentAmbientMusic() != nullptr)
+	{
+		GetMusicAudioComponent()->SetSound(GetCurrentAmbientMusic()->GetRandomMusicSound());
+		GetDefaultMusicAudioComponent()->SetVolumeMultiplier((1 - StartVolume) * MusicVolume);
+		GetMusicAudioComponent()->SetVolumeMultiplier(StartVolume);
+		GetMusicAudioComponent()->Play();
+	}
+	else
+	{
+		GetMusicAudioComponent()->Stop();
+		GetDefaultMusicAudioComponent()->SetVolumeMultiplier(StartVolume * MusicVolume);
+		if (GetDefaultMusicAudioComponent()->Sound == nullptr)
+		{
+			GetDefaultMusicAudioComponent()->SetSound(GetRandomMusicSound());
+			GetDefaultMusicAudioComponent()->Play();
+		}
+	}	
 }
 
 FVector APlayerCharacter::GetFaceForward()
@@ -103,6 +143,11 @@ void APlayerCharacter::BeginPlay()
 {
 	Super::BeginPlay();
 
+	GetWorld()->GetTimerManager().SetTimer(SpringArmTimer, this, &APlayerCharacter::UpdateSpringArm, 0.01f, true);
+
+	GetMusicAudioComponent()->OnAudioFinished.AddDynamic(this, &APlayerCharacter::SoundMusicFinished);
+	GetDefaultMusicAudioComponent()->OnAudioFinished.AddDynamic(this, &APlayerCharacter::DefaultSoundMusicFinished);
+
 	ControllerReference = Cast<ACharacterController>(GetController());
 		
 	InteractableWidget = CreateWidget<UInteractableWidget>(ControllerReference, InteractableWidgetClass);
@@ -125,10 +170,26 @@ void APlayerCharacter::BeginPlay()
 		{
 			ClosestInteractables.AddUnique(_InteractableComponent);
 		}
-		if (UCharacterIdentity* _IdentifierComponent = Cast<UCharacterIdentity>(_CurrentComponent))
+		else if (UCharacterIdentity* _IdentifierComponent = Cast<UCharacterIdentity>(_CurrentComponent))
 		{
 			ClosestIdentifiers.AddUnique(_IdentifierComponent);
 		}
+	}
+
+	TArray<AActor*> _OverlappedActors;
+	GetMesh()->GetOverlappingActors(_OverlappedActors);
+
+	for (AActor* _CurrentActor : _OverlappedActors)
+	{
+		if (AAmbientMusic* _AmbientMusicReference = Cast<AAmbientMusic>(_CurrentActor))
+		{
+			PlayMusic(_AmbientMusicReference);
+		}
+	}
+
+	if (GetCurrentAmbientMusic() == nullptr)
+	{
+		PlayMusic();
 	}
 
 	UpdateInteractable();
@@ -259,6 +320,10 @@ void APlayerCharacter::RemoveIdentifier(UCharacterIdentity* IdentifierReference)
 		{
 			IdentifierWidgetComponent->SetVisibility(false);
 			VisionIdentifier = nullptr;
+			if (GetActionComponent()->GetCurrentAction() == ECurrentAction::Interact)
+			{
+				GetActionComponent()->Ready();
+			}
 		}
 		ClosestIdentifiers.Remove(IdentifierReference);
 	}
@@ -304,6 +369,21 @@ void APlayerCharacter::UpdateIdentifiers()
 	}
 }
 
+void APlayerCharacter::SoundMusicFinished()
+{
+	if (GetCurrentAmbientMusic() != nullptr)
+	{
+		GetMusicAudioComponent()->SetSound(GetCurrentAmbientMusic()->GetRandomMusicSound());
+		GetMusicAudioComponent()->Play();
+	}
+}
+
+void APlayerCharacter::DefaultSoundMusicFinished()
+{
+	GetDefaultMusicAudioComponent()->SetSound(GetRandomMusicSound());
+	GetDefaultMusicAudioComponent()->Play();
+}
+
 void APlayerCharacter::AddInteractable(UInteractableComponent* InteractableReference)
 {
 	ClosestInteractables.AddUnique(InteractableReference);
@@ -318,7 +398,9 @@ void APlayerCharacter::RemoveInteractable(UInteractableComponent* InteractableRe
 {
 	if(ClosestInteractables.Contains(InteractableReference))
 	{
-		if (ClosestInteractables.Num() == 1)
+		ClosestInteractables.Remove(InteractableReference);
+
+		if (ClosestInteractables.Num() == 0)
 		{
 			GetWorld()->GetTimerManager().ClearTimer(InteractableTimer);
 		}
@@ -327,9 +409,12 @@ void APlayerCharacter::RemoveInteractable(UInteractableComponent* InteractableRe
 		{
 			InteractableWidgetComponent->SetVisibility(false);
 			VisionInteractable = nullptr;
+			if (GetActionComponent()->GetCurrentAction() == ECurrentAction::Interact)
+			{
+				GetActionComponent()->Ready();
+			}
 		}
 
-		ClosestInteractables.Remove(InteractableReference);
 	}
 }
 
@@ -353,6 +438,7 @@ void APlayerCharacter::UpdateInteractable()
 				{
 					VisionInteractable = _CurrentInteractable;
 					InteractableWidget->SetActionText(VisionInteractable->InteractionText);
+					InteractableWidget->SetActionImage(VisionInteractable->InteractionImage);
 					InteractableWidgetComponent->AttachToComponent(VisionInteractable, FAttachmentTransformRules::SnapToTargetIncludingScale);
 					InteractableWidgetComponent->SetVisibility(true);
 				}
@@ -360,6 +446,7 @@ void APlayerCharacter::UpdateInteractable()
 				{
 					VisionInteractable = _CurrentInteractable;
 					InteractableWidget->SetActionText(VisionInteractable->InteractionText);
+					InteractableWidget->SetActionImage(VisionInteractable->InteractionImage);
 					InteractableWidgetComponent->AttachToComponent(VisionInteractable, FAttachmentTransformRules::SnapToTargetIncludingScale);
 				}
 			}
@@ -424,6 +511,25 @@ void APlayerCharacter::SwapHands()
 void APlayerCharacter::SwapMouseVisibility()
 {
 	ControllerReference->UpdateMouseCursor(!ControllerReference->bShowMouseCursor);
+}
+
+void APlayerCharacter::UpdateSpringArm()
+{
+	float _ArmLength = GetSpringArmComponent()->TargetArmLength;
+	float _BaseFieldOfView = 70;
+	float _CurrentDistance = FVector::Dist(GetSpringArmComponent()->GetComponentLocation(), GetSpringArmComponent()->GetSocketTransform(FName()).GetLocation());
+	float _FieldOfView = _BaseFieldOfView;
+	if (GetFOVCurve()->IsValidLowLevel())
+	{
+		float _CurrentValue = (1 - _CurrentDistance / _ArmLength);
+		_FieldOfView = _BaseFieldOfView + GetFOVCurve()->GetFloatValue(_CurrentValue);
+	}
+	else
+	{
+		_FieldOfView = _BaseFieldOfView + (1 - _CurrentDistance / _ArmLength) * 40;
+	}
+	UE_LOG(LogTemp, Warning, TEXT("%f"), _ArmLength);
+	GetCameraComponent()->SetFieldOfView(_FieldOfView);
 }
 
 void APlayerCharacter::Debug()
